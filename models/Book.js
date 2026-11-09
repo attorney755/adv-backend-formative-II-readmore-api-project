@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+// I defined the Book schema here to establish field validations and link books to authors
 const bookSchema = new mongoose.Schema(
   {
     title: {
@@ -20,6 +21,7 @@ const bookSchema = new mongoose.Schema(
       type: Number,
       required: [true, 'Published year is required']
     },
+    // Next, I configured the author reference here using ObjectId and ref to enable Mongoose population
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Author',
@@ -27,10 +29,12 @@ const bookSchema = new mongoose.Schema(
     }
   },
   {
+    // Then, I enabled timestamps here to track document creation and update timestamps
     timestamps: true
   }
 );
 
+// Finally, I compiled this schema into the Book model for use in my controllers
 const Book = mongoose.model('Book', bookSchema);
 
 module.exports = Book;

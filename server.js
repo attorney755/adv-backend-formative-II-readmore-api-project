@@ -2,25 +2,25 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 
-// Load environment variables
+// I loaded environment variables from the .env file here so configuration remains flexible and secrets are not hardcoded
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/readmore_api';
 
-// Middleware for parsing JSON request bodies
+// Next, I added this express.json() middleware here so the server can parse incoming JSON request bodies
 app.use(express.json());
 
 // Routes
 const authorRoutes = require('./routes/authorRoutes');
 const bookRoutes = require('./routes/bookRoutes');
 
-// Mount routes
+// Then, I mounted the author and book routers under their respective base paths
 app.use('/authors', authorRoutes);
 app.use('/books', bookRoutes);
 
-// Health-check route
+// Next, I added this root health-check route here so clients can verify the API is running smoothly
 app.get('/', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -33,14 +33,14 @@ app.get('/', (req, res) => {
   });
 });
 
-// 404 handler for undefined routes
+// I added this 404 middleware here to return clean JSON when an unmapped route is requested
 app.use((req, res) => {
   res.status(404).json({
     message: `Cannot ${req.method} ${req.originalUrl} - Route not found`
   });
 });
 
-// Global error handler middleware
+// Next, I implemented this global error handler here to catch any unhandled exceptions and prevent server crashes
 app.use((err, req, res, next) => {
   console.error('Unhandled application error:', err);
   const statusCode = err.statusCode || 500;
@@ -49,7 +49,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Connect to MongoDB and only start server once connection succeeds
+// Then, I structured this async startup function here so the server only starts listening after MongoDB connects
 const startServer = async () => {
   try {
     console.log('Connecting to MongoDB...');

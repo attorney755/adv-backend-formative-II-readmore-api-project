@@ -14,7 +14,7 @@ const createBook = async (req, res) => {
   try {
     const { title, genre, price, publishedYear, author } = req.body;
 
-    // Basic required field validation
+    // I did this initial check here to ensure all required fields are present in the request body
     if (!title || !genre || price === undefined || publishedYear === undefined || !author) {
       return res.status(400).json({
         message: 'title, genre, price, publishedYear, and author are required fields'
@@ -22,14 +22,14 @@ const createBook = async (req, res) => {
     }
 
     // Business Rule 3: Rules the schema can't express (HTTP 422)
-    // Price must be strictly greater than zero
+    // I did this check here to ensure the price is strictly greater than 0
     if (typeof price !== 'number' || price <= 0) {
       return res.status(422).json({
         message: 'Unprocessable Entity: price must be a positive number greater than 0'
       });
     }
 
-    // Published year must be between 1450 (invention of printing press) and current year
+    // Next, I added this validation here to ensure the published year is within valid historical limits
     const currentYear = new Date().getFullYear();
     if (
       typeof publishedYear !== 'number' ||
@@ -42,13 +42,13 @@ const createBook = async (req, res) => {
       });
     }
 
-    // Validate Author ID format
+    // Then, I checked if the author ID parameter matches a valid MongoDB ObjectId format
     if (!mongoose.isValidObjectId(author)) {
       return res.status(400).json({ message: 'Invalid author ID format' });
     }
 
     // Business Rule 1: No orphan books (HTTP 400)
-    // A book must belong to an author that exists in the database
+    // I did this database lookup here to confirm that the author actually exists in MongoDB
     const authorExists = await Author.findById(author);
     if (!authorExists) {
       return res.status(400).json({
@@ -57,6 +57,7 @@ const createBook = async (req, res) => {
     }
 
     // Business Rule 2: No duplicate titles per author, case-insensitive (HTTP 409)
+    // Next, I did this regex query here to ensure the author does not already have a book with the same title
     const duplicateBook = await Book.findOne({
       author: author,
       title: { $regex: new RegExp(`^${escapeRegex(title.trim())}$`, 'i') }
@@ -68,6 +69,7 @@ const createBook = async (req, res) => {
       });
     }
 
+    // Then, I created the new Book document with trimmed string values and valid references
     const newBook = new Book({
       title: title.trim(),
       genre: genre.trim(),
@@ -76,6 +78,7 @@ const createBook = async (req, res) => {
       author
     });
 
+    // Next, I saved the book and then populated the full author object so the caller receives the complete details
     const savedBook = await newBook.save();
     const populatedBook = await Book.findById(savedBook._id).populate('author');
     return res.status(201).json(populatedBook);
@@ -95,15 +98,15 @@ const getAllBooks = async (req, res) => {
   try {
     const { genre, minPrice, maxPrice, author, search, sort, order, page, limit } = req.query;
 
-    // Dynamically build Mongoose query filter
+    // I created this empty filter object here so only query parameters that are actually provided get added
     const filter = {};
 
-    // 1. Filter by genre (case-insensitive exact match)
+    // 1. I added this filter here to match the genre case-insensitively when requested
     if (genre) {
       filter.genre = { $regex: new RegExp(`^${escapeRegex(genre.trim())}$`, 'i') };
     }
 
-    // 2. Filter by price range (minPrice, maxPrice, or both)
+    // 2. Next, I handled the price range filtering here supporting minPrice, maxPrice, or both
     if (minPrice !== undefined || maxPrice !== undefined) {
       filter.price = {};
       if (minPrice !== undefined && !isNaN(Number(minPrice))) {
@@ -114,7 +117,7 @@ const getAllBooks = async (req, res) => {
       }
     }
 
-    // 3. Filter by author ID
+    // 3. Then, I validated and added the author filter here if an author ID was passed
     if (author) {
       if (!mongoose.isValidObjectId(author)) {
         return res.status(400).json({ message: 'Invalid author ID format in query' });
@@ -122,18 +125,18 @@ const getAllBooks = async (req, res) => {
       filter.author = author;
     }
 
-    // 4. Case-insensitive search on book title
+    // 4. Next, I added this case-insensitive substring search on the title here when search text is supplied
     if (search) {
       filter.title = { $regex: new RegExp(escapeRegex(search.trim()), 'i') };
     }
 
-    // 5. Dynamic Sorting: price, title, publishedYear, or default createdAt
+    // 5. Then, I implemented dynamic sorting here with a whitelist of permitted fields to ensure safety
     const validSortFields = ['price', 'title', 'publishedYear', 'createdAt'];
     const sortField = validSortFields.includes(sort) ? sort : 'createdAt';
     const sortDirection = order && order.toLowerCase() === 'asc' ? 1 : -1;
     const sortOptions = { [sortField]: sortDirection };
 
-    // 6. Pagination Challenge (page and limit)
+    // 6. Next, I implemented the optional pagination challenge here when page or limit query params are passed
     const isPaginated = page !== undefined || limit !== undefined;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.max(1, parseInt(limit, 10) || 10);
@@ -149,6 +152,7 @@ const getAllBooks = async (req, res) => {
 
     const books = await query.exec();
 
+    // Finally, I returned pagination metadata if requested, or the plain array if unpaginated
     if (isPaginated) {
       return res.status(200).json({
         total,
@@ -172,11 +176,15 @@ const getBookById = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // I did this check here to ensure the provided book ID format is valid
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid book ID format' });
     }
 
+    // Next, I fetched the book by ID and populated the author field so the full author document is returned
     const book = await Book.findById(id).populate('author');
+
+    // Then, I returned 404 if no book was found with this ID
     if (!book) {
       return res.status(404).json({ message: 'Book not found' });
     }
@@ -194,10 +202,12 @@ const updateBook = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // I did this check here to ensure the book ID is valid before executing updates
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid book ID format' });
     }
 
+    // Next, I found the existing book to verify its presence and retrieve current values
     const existingBook = await Book.findById(id);
     if (!existingBook) {
       return res.status(404).json({ message: 'Book not found' });
@@ -205,7 +215,7 @@ const updateBook = async (req, res) => {
 
     const { title, genre, price, publishedYear, author } = req.body;
 
-    // Validate Business Rule 3 if price or publishedYear are updated
+    // Then, I validated price bounds if a new price was supplied
     if (price !== undefined) {
       if (typeof price !== 'number' || price <= 0) {
         return res.status(422).json({
@@ -214,6 +224,7 @@ const updateBook = async (req, res) => {
       }
     }
 
+    // Next, I validated the published year limits if a new year was supplied
     if (publishedYear !== undefined) {
       const currentYear = new Date().getFullYear();
       if (
@@ -228,7 +239,7 @@ const updateBook = async (req, res) => {
       }
     }
 
-    // Validate Business Rule 1 if author is updated
+    // Next, I checked if the new author exists to prevent creating orphan books on update
     let targetAuthorId = existingBook.author;
     if (author) {
       if (!mongoose.isValidObjectId(author)) {
@@ -243,7 +254,7 @@ const updateBook = async (req, res) => {
       targetAuthorId = author;
     }
 
-    // Validate Business Rule 2 if title or author is updated
+    // Then, I checked if changing the title or author would create a duplicate title for that author
     const targetTitle = title ? title.trim() : existingBook.title;
     if (title || author) {
       const duplicateBook = await Book.findOne({
@@ -259,6 +270,7 @@ const updateBook = async (req, res) => {
       }
     }
 
+    // Finally, I executed the update with validators enabled and populated the author reference
     const updatedBook = await Book.findByIdAndUpdate(
       id,
       { $set: req.body },
@@ -281,15 +293,18 @@ const deleteBook = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // I did this check here to ensure the ID is valid before attempting deletion
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid book ID format' });
     }
 
+    // Next, I checked if the book exists in the database
     const book = await Book.findById(id);
     if (!book) {
       return res.status(404).json({ message: 'Book not found' });
     }
 
+    // Then, I deleted the book and returned a success message with 200 OK
     await Book.findByIdAndDelete(id);
     return res.status(200).json({ message: 'Book deleted successfully' });
   } catch (error) {
