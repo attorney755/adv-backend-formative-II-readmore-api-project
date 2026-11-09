@@ -1,0 +1,230 @@
+### ==============================================================================
+### ReadMore API — VS Code REST Client / Postman / Insomnia Testing Requests
+### ==============================================================================
+@baseUrl = http://localhost:5000
+@authorId = {{createAuthor1.response.body._id}}
+@author2Id = {{createAuthor2.response.body._id}}
+@bookId = {{createBook1.response.body._id}}
+
+### ------------------------------------------------------------------------------
+### 0. Health Check
+### ------------------------------------------------------------------------------
+# @name healthCheck
+GET {{baseUrl}}/
+Accept: application/json
+
+### ------------------------------------------------------------------------------
+### 1. Author Endpoints (CRUD)
+### ------------------------------------------------------------------------------
+
+### 1.1 Create Author 1 (Chinua Achebe) -> Expect 201 Created
+# @name createAuthor1
+POST {{baseUrl}}/authors
+Content-Type: application/json
+
+{
+  "name": "Chinua Achebe",
+  "country": "Nigeria",
+  "bio": "Renowned Nigerian novelist, poet, and critic regarded as the father of modern African literature."
+}
+
+### 1.2 Create Author 2 (Chimamanda Ngozi Adichie) -> Expect 201 Created
+# @name createAuthor2
+POST {{baseUrl}}/authors
+Content-Type: application/json
+
+{
+  "name": "Chimamanda Ngozi Adichie",
+  "country": "Nigeria",
+  "bio": "Award-winning author of Purple Hibiscus and Half of a Yellow Sun."
+}
+
+### 1.3 Get All Authors -> Expect 200 OK
+GET {{baseUrl}}/authors
+Accept: application/json
+
+### 1.4 Get Author by Valid ID -> Expect 200 OK
+GET {{baseUrl}}/authors/{{authorId}}
+Accept: application/json
+
+### 1.5 Get Author by Non-Existent ID -> Expect 404 Not Found
+GET {{baseUrl}}/authors/64b0f0f0f0f0f0f0f0f0f0f0
+Accept: application/json
+
+### 1.6 Update Author -> Expect 200 OK
+PUT {{baseUrl}}/authors/{{authorId}}
+Content-Type: application/json
+
+{
+  "bio": "Legendary author of Things Fall Apart and Anthills of the Savannah."
+}
+
+### 1.7 Get All Books by an Author -> Expect 200 OK
+GET {{baseUrl}}/authors/{{authorId}}/books
+Accept: application/json
+
+### ------------------------------------------------------------------------------
+### 2. Book Endpoints (CRUD & Population)
+### ------------------------------------------------------------------------------
+
+### 2.1 Create Book 1 for Author 1 -> Expect 201 Created (populated with author details)
+# @name createBook1
+POST {{baseUrl}}/books
+Content-Type: application/json
+
+{
+  "title": "Things Fall Apart",
+  "genre": "Classic Fiction",
+  "price": 25.50,
+  "publishedYear": 1958,
+  "author": "{{authorId}}"
+}
+
+### 2.2 Create Book 2 for Author 1 -> Expect 201 Created
+# @name createBook2
+POST {{baseUrl}}/books
+Content-Type: application/json
+
+{
+  "title": "No Longer at Ease",
+  "genre": "Historical Fiction",
+  "price": 18.00,
+  "publishedYear": 1960,
+  "author": "{{authorId}}"
+}
+
+### 2.3 Create Book 3 for Author 1 -> Expect 201 Created
+# @name createBook3
+POST {{baseUrl}}/books
+Content-Type: application/json
+
+{
+  "title": "Arrow of God",
+  "genre": "Classic Fiction",
+  "price": 30.00,
+  "publishedYear": 1964,
+  "author": "{{authorId}}"
+}
+
+### 2.4 Get All Books -> Expect 200 OK (full author details populated)
+GET {{baseUrl}}/books
+Accept: application/json
+
+### 2.5 Get Single Book by ID -> Expect 200 OK (full author details populated)
+GET {{baseUrl}}/books/{{bookId}}
+Accept: application/json
+
+### 2.6 Get Book with Non-Existent ID -> Expect 404 Not Found
+GET {{baseUrl}}/books/64b0f0f0f0f0f0f0f0f0f0f0
+Accept: application/json
+
+### 2.7 Update a Book -> Expect 200 OK
+PUT {{baseUrl}}/books/{{bookId}}
+Content-Type: application/json
+
+{
+  "price": 27.99
+}
+
+### ------------------------------------------------------------------------------
+### 3. Part 4 — Business Rules & Critical Thinking Demonstrations
+### ------------------------------------------------------------------------------
+
+### 3.1 Business Rule 1: No Orphan Books -> Expect 400 Bad Request
+# Attempting to create a book with an author ID that does not exist in the database
+POST {{baseUrl}}/books
+Content-Type: application/json
+
+{
+  "title": "Ghost Book",
+  "genre": "Mystery",
+  "price": 15.00,
+  "publishedYear": 2020,
+  "author": "64b0f0f0f0f0f0f0f0f0f0f0"
+}
+
+### 3.2 Business Rule 2: No Duplicate Titles per Author (Case-Insensitive) -> Expect 409 Conflict
+# Attempting to create another book with title "things fall apart" for the same author
+POST {{baseUrl}}/books
+Content-Type: application/json
+
+{
+  "title": "things fall apart",
+  "genre": "Classic Fiction",
+  "price": 20.00,
+  "publishedYear": 1958,
+  "author": "{{authorId}}"
+}
+
+### 3.3 Business Rule 3: Schema Limits - Zero or Negative Price -> Expect 422 Unprocessable Entity
+POST {{baseUrl}}/books
+Content-Type: application/json
+
+{
+  "title": "Free Book",
+  "genre": "Fiction",
+  "price": 0,
+  "publishedYear": 2021,
+  "author": "{{authorId}}"
+}
+
+### 3.4 Business Rule 3: Schema Limits - Published Year in the Future -> Expect 422 Unprocessable Entity
+POST {{baseUrl}}/books
+Content-Type: application/json
+
+{
+  "title": "Future Journey",
+  "genre": "Sci-Fi",
+  "price": 19.99,
+  "publishedYear": 2099,
+  "author": "{{authorId}}"
+}
+
+### 3.5 Business Rule 3: Schema Limits - Published Year before 1450 -> Expect 422 Unprocessable Entity
+POST {{baseUrl}}/books
+Content-Type: application/json
+
+{
+  "title": "Ancient Manuscript",
+  "genre": "History",
+  "price": 45.00,
+  "publishedYear": 1200,
+  "author": "{{authorId}}"
+}
+
+### 3.6 Business Rule 4: Author Delete Policy (Option A - Block Delete) -> Expect 409 Conflict
+# Deleting an author who still has associated books is blocked to prevent orphan books
+DELETE {{baseUrl}}/authors/{{authorId}}
+Accept: application/json
+
+### 3.7 Business Rule 5: Dynamic Search & Filter - By Genre
+GET {{baseUrl}}/books?genre=Classic Fiction
+Accept: application/json
+
+### 3.8 Business Rule 5: Dynamic Search & Filter - By Price Range (minPrice & maxPrice)
+GET {{baseUrl}}/books?minPrice=15&maxPrice=29
+Accept: application/json
+
+### 3.9 Business Rule 5: Dynamic Search & Filter - Case-Insensitive Search on Title
+GET {{baseUrl}}/books?search=arrow
+Accept: application/json
+
+### 3.10 Business Rule 5: Combined Filters & Dynamic Sorting (sort=price&order=asc)
+GET {{baseUrl}}/books?genre=Classic Fiction&minPrice=20&sort=price&order=asc
+Accept: application/json
+
+### 3.11 Challenge: Pagination (page=1&limit=2) -> Returns { total, page, limit, totalPages, results }
+GET {{baseUrl}}/books?page=1&limit=2
+Accept: application/json
+
+### 3.12 Business Rule 6: Author Statistics for Author with Books -> Expect 200 OK
+GET {{baseUrl}}/authors/{{authorId}}/stats
+Accept: application/json
+
+### 3.13 Business Rule 6: Author Statistics for Author with NO Books -> Expect 200 OK with sensible defaults
+GET {{baseUrl}}/authors/{{author2Id}}/stats
+Accept: application/json
+
+### 3.14 Delete Author with NO Books (Author 2) -> Expect 200 OK
+DELETE {{baseUrl}}/authors/{{author2Id}}
+Accept: application/json
