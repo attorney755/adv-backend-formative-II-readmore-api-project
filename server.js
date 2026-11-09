@@ -14,9 +14,11 @@ app.use(express.json());
 
 // Routes
 const authorRoutes = require('./routes/authorRoutes');
+const bookRoutes = require('./routes/bookRoutes');
 
 // Mount routes
 app.use('/authors', authorRoutes);
+app.use('/books', bookRoutes);
 
 // Health-check route
 app.get('/', (req, res) => {
