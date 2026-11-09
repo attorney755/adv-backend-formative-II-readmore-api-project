@@ -87,12 +87,78 @@ const createBook = async (req, res) => {
   }
 };
 
-// @desc    Get all books with full author details populated
+// @desc    Get all books with optional search, filtering, sorting, and pagination
 // @route   GET /books
 // @access  Public
+// Business Rule 5: Dynamic Search, Filtering, Sorting & Pagination Challenge
 const getAllBooks = async (req, res) => {
   try {
-    const books = await Book.find().populate('author').sort({ createdAt: -1 });
+    const { genre, minPrice, maxPrice, author, search, sort, order, page, limit } = req.query;
+
+    // Dynamically build Mongoose query filter
+    const filter = {};
+
+    // 1. Filter by genre (case-insensitive exact match)
+    if (genre) {
+      filter.genre = { $regex: new RegExp(`^${escapeRegex(genre.trim())}$`, 'i') };
+    }
+
+    // 2. Filter by price range (minPrice, maxPrice, or both)
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      filter.price = {};
+      if (minPrice !== undefined && !isNaN(Number(minPrice))) {
+        filter.price.$gte = Number(minPrice);
+      }
+      if (maxPrice !== undefined && !isNaN(Number(maxPrice))) {
+        filter.price.$lte = Number(maxPrice);
+      }
+    }
+
+    // 3. Filter by author ID
+    if (author) {
+      if (!mongoose.isValidObjectId(author)) {
+        return res.status(400).json({ message: 'Invalid author ID format in query' });
+      }
+      filter.author = author;
+    }
+
+    // 4. Case-insensitive search on book title
+    if (search) {
+      filter.title = { $regex: new RegExp(escapeRegex(search.trim()), 'i') };
+    }
+
+    // 5. Dynamic Sorting: price, title, publishedYear, or default createdAt
+    const validSortFields = ['price', 'title', 'publishedYear', 'createdAt'];
+    const sortField = validSortFields.includes(sort) ? sort : 'createdAt';
+    const sortDirection = order && order.toLowerCase() === 'asc' ? 1 : -1;
+    const sortOptions = { [sortField]: sortDirection };
+
+    // 6. Pagination Challenge (page and limit)
+    const isPaginated = page !== undefined || limit !== undefined;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    const total = await Book.countDocuments(filter);
+
+    let query = Book.find(filter).populate('author').sort(sortOptions);
+
+    if (isPaginated) {
+      query = query.skip(skip).limit(limitNum);
+    }
+
+    const books = await query.exec();
+
+    if (isPaginated) {
+      return res.status(200).json({
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum) || 1,
+        results: books
+      });
+    }
+
     return res.status(200).json(books);
   } catch (error) {
     return res.status(500).json({ message: 'Internal server error', error: error.message });
