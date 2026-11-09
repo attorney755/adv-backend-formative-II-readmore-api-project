@@ -6,7 +6,7 @@ The system models two relational entities — **Authors** and **Books** — wher
 
 ---
 
-## 📁 Project Architecture & Folder Structure
+## Project Architecture & Folder Structure
 
 I organized the codebase following the Model-View-Controller (MVC) architectural pattern to ensure clean separation of concerns:
 
@@ -34,7 +34,7 @@ readmore-api/
 
 ---
 
-## 🛠️ Step-by-Step Implementation Guide
+## Step-by-Step Implementation Guide
 
 In this section, I document how each part of the project is built and what you have to do in each step.
 
@@ -71,7 +71,7 @@ In this step, you have to build the Book endpoints mounted under `/books`:
 
 ---
 
-## 🧠 Step 4: Business Rules & Critical Thinking
+## Step 4: Business Rules & Critical Thinking
 
 In this step, you have to enforce real-world business constraints in your controllers that the database schema cannot enforce automatically:
 
@@ -139,7 +139,7 @@ In this step, you have to enforce real-world business constraints in your contro
 
 ---
 
-## 🚀 How to Run and Test the Project
+## How to Run and Test the Project
 
 ### 1. Clone Your Fork
 ```bash
@@ -179,7 +179,7 @@ You can install the **REST Client** extension in VS Code and click **Send Reques
 
 ---
 
-## 📋 API Endpoints Reference Summary
+## API Endpoints Reference Summary
 
 | Method | Endpoint | Description | Status Code |
 | :--- | :--- | :--- | :--- |
