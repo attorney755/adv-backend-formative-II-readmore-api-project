@@ -156,11 +156,69 @@ const getAuthorBooks = async (req, res) => {
   }
 };
 
+// @desc    Get author statistics (Business Rule 6)
+// @route   GET /authors/:id/stats
+// @access  Public
+const getAuthorStats = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid author ID format' });
+    }
+
+    const author = await Author.findById(id);
+    if (!author) {
+      return res.status(404).json({ message: 'Author not found' });
+    }
+
+    const books = await Book.find({ author: id });
+
+    // Handle edge case where author has no books
+    if (books.length === 0) {
+      return res.status(200).json({
+        author: author.name,
+        bookCount: 0,
+        averagePrice: 0,
+        cheapestBook: null,
+        mostExpensiveBook: null
+      });
+    }
+
+    const bookCount = books.length;
+    const totalPrice = books.reduce((acc, curr) => acc + curr.price, 0);
+    const averagePrice = Number((totalPrice / bookCount).toFixed(2));
+
+    let cheapest = books[0];
+    let mostExpensive = books[0];
+
+    for (const b of books) {
+      if (b.price < cheapest.price) {
+        cheapest = b;
+      }
+      if (b.price > mostExpensive.price) {
+        mostExpensive = b;
+      }
+    }
+
+    return res.status(200).json({
+      author: author.name,
+      bookCount,
+      averagePrice,
+      cheapestBook: cheapest.title,
+      mostExpensiveBook: mostExpensive.title
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
 module.exports = {
   createAuthor,
   getAllAuthors,
   getAuthorById,
   updateAuthor,
   deleteAuthor,
-  getAuthorBooks
+  getAuthorBooks,
+  getAuthorStats
 };

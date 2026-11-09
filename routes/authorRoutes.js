@@ -6,7 +6,8 @@ const {
   getAuthorById,
   updateAuthor,
   deleteAuthor,
-  getAuthorBooks
+  getAuthorBooks,
+  getAuthorStats
 } = require('../controllers/authorController');
 
 // Author CRUD routes
@@ -14,12 +15,13 @@ router.route('/')
   .post(createAuthor)
   .get(getAllAuthors);
 
+// Author statistics and books
+router.get('/:id/stats', getAuthorStats);
+router.get('/:id/books', getAuthorBooks);
+
 router.route('/:id')
   .get(getAuthorById)
   .put(updateAuthor)
   .delete(deleteAuthor);
-
-// Specific author's books
-router.get('/:id/books', getAuthorBooks);
 
 module.exports = router;
