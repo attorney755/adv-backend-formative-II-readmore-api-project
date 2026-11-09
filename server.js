@@ -33,6 +33,22 @@ app.get('/', (req, res) => {
   });
 });
 
+// 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({
+    message: `Cannot ${req.method} ${req.originalUrl} - Route not found`
+  });
+});
+
+// Global error handler middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled application error:', err);
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    message: err.message || 'Internal Server Error'
+  });
+});
+
 // Connect to MongoDB and only start server once connection succeeds
 const startServer = async () => {
   try {
