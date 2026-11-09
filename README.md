@@ -1,200 +1,198 @@
 # ReadMore API — Express + MongoDB (Mongoose)
 
-Your first backend API assignment. Build a small REST API for a bookstore using **Express.js**, with **MongoDB** as the database and **Mongoose** as the modelling layer.
+In this project, I built a RESTful API for a bookstore called **ReadMore API** using **Node.js**, **Express.js**, **MongoDB**, and **Mongoose**. 
 
-There are **two entities** — **Author** and **Book** — and they are **linked**: one author can have many books, and every book belongs to one author. You will model them, connect to MongoDB, and build endpoints for each.
-
-Then, in **Part 4**, the store "goes live" and your endpoints have to enforce **real business rules** the database won't enforce on its own. That part is where the marks are — it rewards how you *think*, not just whether the CRUD works.
-
-> **Before you start:** watch the Mongoose video shared with this assignment. It covers connecting to MongoDB, defining schemas and models, and the basic query methods you will need. This is a take-home assignment — you are expected to work out the *how* yourself.
+The system models two relational entities — **Authors** and **Books** — where one author can have many books, and every book belongs to an author. Beyond standard CRUD operations, I implemented custom business logic, dynamic filtering, sorting, pagination, data population, and strict validation rules.
 
 ---
 
-## What you need
+## 📁 Project Architecture & Folder Structure
 
-- **Node.js 18+** and **npm**
-- **MongoDB** — either a local install or a free **MongoDB Atlas** cluster
-- An API client to test your endpoints: **Postman**, **Insomnia**, or the VS Code **REST Client** extension
-- Suggested packages: `express`, `mongoose`, `dotenv` (and `nodemon` for development)
-
----
-
-## The data model
-
-```
-authors ──< books
-```
-
-One author has **many** books; each book belongs to **one** author. The link is a field on the book that stores the author's id.
-
-| Entity  | Fields                                                              |
-|---------|--------------------------------------------------------------------|
-| Author  | `name`, `country`, `bio`                                           |
-| Book    | `title`, `genre`, `price`, `publishedYear`, `author` (→ Author id) |
-
----
-
-## Suggested project structure
-
-Keep the code organised. A route should only map a URL to a function; the **controller** is the function that does the actual work — reading the request, applying the rules, talking to the database, and choosing the response and status code. Keeping them apart is where most of the marks live: your routes will be short, your controllers will have to *think*.
+I organized the codebase following the Model-View-Controller (MVC) architectural pattern to ensure clean separation of concerns:
 
 ```
 readmore-api/
-├── .env             ← your MongoDB connection string (do NOT commit real secrets)
-├── .gitignore       ← ignore node_modules and .env
-├── server.js        ← app entry point: connect to DB + start the server
-├── models/          ← Author and Book schemas
-├── controllers/     ← the logic lives here
-└── routes/          ← wire URLs to controller functions
+├── .env.example         # Template for environment configuration
+├── .gitignore           # Ignores node_modules, .env, and logs
+├── package.json         # Project metadata and dependencies
+├── server.js            # App entry point: DB connection and middleware
+├── models/
+│   ├── Author.js        # Mongoose schema and model for Author
+│   └── Book.js          # Mongoose schema and model for Book (references Author)
+├── controllers/
+│   ├── authorController.js # Business logic for Author endpoints and stats
+│   └── bookController.js   # Business logic for Book endpoints, filters, and validations
+├── routes/
+│   ├── authorRoutes.js  # Express router mapping /authors endpoints to controller functions
+│   └── bookRoutes.js    # Express router mapping /books endpoints to controller functions
+└── requests.http        # Comprehensive REST Client file to test all endpoints
 ```
 
----
-
-## Part 0 — Project setup
-
-Get a server running and connected to MongoDB before you build anything else.
-
-- Initialise the project and install your dependencies.
-- Store your MongoDB connection string in a `.env` file (never hard-code it).
-- Connect to MongoDB on startup and only start listening once the connection succeeds.
-- Add a health-check route (`GET /`) that returns a simple JSON message.
+- **Routes (`routes/`):** Only map HTTP methods and URL paths to corresponding controller functions.
+- **Controllers (`controllers/`):** Contain the core business logic, query execution, data validation, and HTTP response handling.
+- **Models (`models/`):** Define the Mongoose data schemas, field types, and inter-collection relationships.
 
 ---
 
-## Part 1 — Define the two models
+## 🛠️ Step-by-Step Implementation Guide
 
-> **Concept:** a Mongoose **schema** describes the shape of a document; a **model** is what you use to read and write those documents. The link between two collections is made with a field of type `ObjectId` that **references** the other model — this is what later lets you `populate` the author's full details onto a book.
+In this section, I document how each part of the project is built and what you have to do in each step.
 
-- Create the **Author** model with the fields listed above.
-- Create the **Book** model, including the `author` field that references the Author model. This reference is what links the two entities.
-- Decide which fields should be **required**.
+### Step 0: Project Setup & Database Connection
+In this step, you have to set up the project environment and connect Express to MongoDB:
+- Initialize the project with `npm init -y` and install `express`, `mongoose`, and `dotenv`.
+- Create a `.env` file to store sensitive configuration like `PORT` and `MONGODB_URI` without exposing them in version control.
+- In `server.js`, configure Mongoose to connect to the database first, and only start listening for incoming HTTP requests once the connection succeeds.
+- Provide a root health-check endpoint (`GET /`) that confirms the API is live.
+- Add route-not-found (`404`) middleware and a global error handling middleware to return clean JSON error messages.
+
+### Step 1: Define the Data Models
+In this step, you have to define the Mongoose schemas and models:
+- **Author Model (`models/Author.js`):** Contains `name` (required, trimmed), `country` (required, trimmed), and `bio` (trimmed string).
+- **Book Model (`models/Book.js`):** Contains `title` (required, trimmed), `genre` (required, trimmed), `price` (required number), `publishedYear` (required integer), and `author` (required `mongoose.Schema.Types.ObjectId` referencing the `Author` model).
+- The `author` field creates the reference link that allows Mongoose to populate author information onto book queries.
+
+### Step 2: Author CRUD Endpoints
+In this step, you have to build the five core endpoints for authors mounted under `/authors`:
+1. `POST /authors` — Creates a new author (`201 Created`). Validates that `name` and `country` are provided (`400 Bad Request` if missing).
+2. `GET /authors` — Retrieves all authors from the database (`200 OK`).
+3. `GET /authors/:id` — Retrieves a single author by ID. Returns `404 Not Found` if the author does not exist and `400 Bad Request` if the ID format is invalid.
+4. `PUT /authors/:id` — Updates an existing author with `runValidators: true` (`200 OK`). Returns `404 Not Found` if the ID does not exist.
+5. `DELETE /authors/:id` — Deletes an author (subject to the delete policy implemented in Step 4).
+6. `GET /authors/:id/books` — Retrieves all books belonging to the specified author (`200 OK`).
+
+### Step 3: Book CRUD Endpoints & Mongoose Population
+In this step, you have to build the Book endpoints mounted under `/books`:
+1. `POST /books` — Creates a new book linked to an author (`201 Created`).
+2. `GET /books` — Retrieves all books, using `.populate('author')` to replace the raw author ObjectId with the full author document.
+3. `GET /books/:id` — Retrieves a single book by ID with the author populated (`200 OK` or `404 Not Found`).
+4. `PUT /books/:id` — Updates a book's details (`200 OK` or `404 Not Found`).
+5. `DELETE /books/:id` — Deletes a book document (`200 OK` or `404 Not Found`).
 
 ---
 
-## Part 2 — Author endpoints
+## 🧠 Step 4: Business Rules & Critical Thinking
 
-Build these five endpoints for the **Author** entity, mounted under `/authors`.
+In this step, you have to enforce real-world business constraints in your controllers that the database schema cannot enforce automatically:
 
-| # | Method   | Path            | What it does              |
-|---|----------|-----------------|---------------------------|
-| 1 | `POST`   | `/authors`      | Create a new author       |
-| 2 | `GET`    | `/authors`      | Get **all** authors       |
-| 3 | `GET`    | `/authors/:id`  | Get **one** author by id  |
-| 4 | `PUT`    | `/authors/:id`  | Update an author          |
-| 5 | `DELETE` | `/authors/:id`  | Delete an author          |
+### 1. No Orphan Books (`HTTP 400 Bad Request`)
+- **Reason:** In Mongoose, marking `author` as required only verifies that an `ObjectId` was provided in the request body. It does not check if an author with that ID actually exists in MongoDB.
+- **My Implementation:** In `createBook` and `updateBook`, I query `Author.findById(author)`. If the author does not exist, the API rejects the operation with `400 Bad Request` and a clear message, ensuring no book can exist without a real author.
 
-Put the logic in a controller; keep the route file to wiring only. For read-one, update, and delete, return **404** with a helpful message when no author has that id.
+### 2. No Duplicate Titles per Author (`HTTP 409 Conflict`)
+- **Reason:** An author should not have two books with the exact same title, and the comparison must be case-insensitive (`"the silent sea"` = `"The Silent Sea"`). However, two *different* authors are allowed to write books with the same title.
+- **My Implementation:** When creating or updating a book, I execute a scoped query checking `{ author, title: { $regex: new RegExp('^' + escapedTitle + '$', 'i') } }`. If a book is found, the controller returns `409 Conflict`.
+
+### 3. Rules the Schema Can't Express (`HTTP 422 Unprocessable Entity`)
+- **Reason:** Standard Mongoose schemas don't handle dynamic date ranges or custom business thresholds out of the box.
+- **My Implementation:**
+  - If `price` is zero or negative (`price <= 0`), the request is rejected with `422 Unprocessable Entity`.
+  - If `publishedYear` is earlier than `1450` (the advent of the modern printing press) or set in the future (`publishedYear > new Date().getFullYear()`), the request is rejected with `422 Unprocessable Entity`.
+
+### 4. Author Deletion Policy (`Option A — Block Delete with HTTP 409`)
+- **Problem:** Deleting an author who still has books in the store would leave orphan books pointing to a deleted author ID.
+- **Why I Chose Option A (Block Delete):**
+  - In a commercial bookstore or inventory management system, books represent physical inventory, warehouse stock, SKUs, sales records, and financial accounting items.
+  - Silently deleting an author and cascading the deletion to all their books (**Option B**) would cause catastrophic and irreversible data loss.
+  - Option A protects inventory integrity by blocking the deletion with `409 Conflict` and returning the count of associated books. The administrator must explicitly reassign or remove the books before the author can be deleted.
+  - **Downside of Option A:** It requires extra manual operations from the client/admin when they deliberately want to delete an author and all their works.
+
+### 5. Dynamic Search, Filtering, Sorting & Pagination
+- **Dynamic Query Building:** `GET /books` checks query parameters dynamically and only applies filters that are present:
+  - `genre`: Filters by book genre (case-insensitive).
+  - `minPrice` & `maxPrice`: Range filtering (`$gte`, `$lte`).
+  - `author`: Filters books by author ObjectId.
+  - `search`: Substring search on book title using case-insensitive regular expressions.
+  - `sort` & `order`: Sorts by `price`, `title`, `publishedYear`, or `createdAt` in `asc` or `desc` order.
+- **Challenge — Pagination:** When `page` and `limit` are supplied, the endpoint returns:
+  ```json
+  {
+    "total": 10,
+    "page": 1,
+    "limit": 5,
+    "totalPages": 2,
+    "results": [ ... ]
+  }
+  ```
+
+### 6. Author Statistics (`GET /authors/:id/stats`)
+- In this step, you calculate summary statistics from all books written by an author:
+  ```json
+  {
+    "author": "Chinua Achebe",
+    "bookCount": 3,
+    "averagePrice": 24.5,
+    "cheapestBook": "No Longer at Ease",
+    "mostExpensiveBook": "Arrow of God"
+  }
+  ```
+- **Handling Authors with Zero Books:** If an author has no books, the endpoint returns `200 OK` with sensible default values instead of crashing:
+  ```json
+  {
+    "author": "Chimamanda Ngozi Adichie",
+    "bookCount": 0,
+    "averagePrice": 0,
+    "cheapestBook": null,
+    "mostExpensiveBook": null
+  }
+  ```
 
 ---
 
-## Part 3 — Book endpoints (the linked entity)
+## 🚀 How to Run and Test the Project
 
-Build the same five endpoints for the **Book** entity, mounted under `/books`.
-
-| # | Method   | Path          | What it does                    |
-|---|----------|---------------|---------------------------------|
-| 1 | `POST`   | `/books`      | Create a book **for an author** |
-| 2 | `GET`    | `/books`      | Get all books                   |
-| 3 | `GET`    | `/books/:id`  | Get one book by id              |
-| 4 | `PUT`    | `/books/:id`  | Update a book                   |
-| 5 | `DELETE` | `/books/:id`  | Delete a book                   |
-
-When you create a book, the request body must include the id of an author that already exists:
-
-```json
-{
-  "title": "The Silent Sea",
-  "genre": "Thriller",
-  "price": 24.99,
-  "publishedYear": 2021,
-  "author": "<an existing author id>"
-}
+### 1. Clone Your Fork
+```bash
+git clone https://github.com/attorney755/adv-backend-formative-II-readmore-api-project.git
+cd adv-backend-formative-II-readmore-api-project
 ```
 
-### Requirements
-- **Show the link.** On `GET /books` and `GET /books/:id`, the author should appear as the **full author details**, not just an id. (Mongoose has a feature for this — find it in the video.)
-- Return **404** when a book id is not found.
-- **Add one linking endpoint:** `GET /authors/:id/books` — return all books written by that author.
+### 2. Install Dependencies
+```bash
+npm install
+```
+
+### 3. Setup Environment Variables
+Create a `.env` file in the root directory:
+```bash
+cp .env.example .env
+```
+Ensure your MongoDB connection string is configured in `.env`:
+```env
+PORT=5000
+MONGODB_URI=mongodb://127.0.0.1:27017/readmore_api
+```
+
+### 4. Start the Server
+- Production mode:
+  ```bash
+  npm start
+  ```
+- Development mode (with auto-reload):
+  ```bash
+  npm run dev
+  ```
+
+### 5. Testing with REST Client
+A full test suite is provided in [`requests.http`](file:///home/attorney/adv-backend-formative-II-readmore-api-project/requests.http).
+You can install the **REST Client** extension in VS Code and click **Send Request** directly above each endpoint, or copy the requests into Postman or Insomnia.
 
 ---
 
-## Part 4 — The Scenario: ReadMore goes live
+## 📋 API Endpoints Reference Summary
 
-> **This is the part that tests your thinking.** So far your controllers just move data in and out. Now the store is opening to real customers, and the product owner hands you rules the API must enforce. **MongoDB will not enforce these for you** — your controllers have to. Some have an obvious solution; at least one has *no single right answer*, and you must choose an approach and defend it.
-
-Read all six requirements before writing code — some affect each other.
-
-### 1 — No orphan books
-A book must belong to a **real** author. If someone tries to create a book with an author id that doesn't exist, reject it with **400** and don't save it.
-> The Book schema already marks `author` as required. Why is that *not enough* to stop a made-up id?
-
-### 2 — No duplicate titles per author
-The same author may not have two books with the **same title**, treated case-insensitively (`"the silent sea"` = `"The Silent Sea"`). Reject a duplicate with **409**.
-> This rule is per-author, not global — two *different* authors may each write a book called "Home". Your check has to reflect that.
-
-### 3 — Rules the schema can't express
-Reject with **422** and a helpful message if `price` is zero or negative, or if `publishedYear` is in the future or before 1450.
-
-### 4 — Deleting an author who still has books *(the hard one)*
-Deleting an author currently leaves their books pointing at an id that no longer exists (**orphans**). Fix this. Three reasonable policies exist:
-
-| Option | Behaviour                                                                   |
-|--------|-----------------------------------------------------------------------------|
-| **A**  | **Block** the delete — return **409** if the author still has books.         |
-| **B**  | **Cascade** — delete the author *and* all of their books.                   |
-| **C**  | **Reassign** — move the books to a fallback author before deleting.         |
-
-**Pick ONE, implement it, and justify it out loud in your video:** why you chose it and what its downside is — every option has one.
-> What would a real bookstore want? Does your answer change if the books have already been sold?
-
-### 5 — A search & filter endpoint
-Upgrade `GET /books` to accept these **optional** query parameters, in any combination:
-
-```
-GET /books?genre=Thriller&minPrice=10&maxPrice=30&search=sea&sort=price&order=asc
-```
-
-| Param                 | Effect                                                          |
-|-----------------------|----------------------------------------------------------------|
-| `genre`               | only books of that genre                                       |
-| `minPrice`/`maxPrice` | price within the range (either, both, or neither may appear)   |
-| `author`              | only books by that author id                                   |
-| `search`              | title contains this text (case-insensitive)                    |
-| `sort` + `order`      | sort by `price`, `title`, or `publishedYear`, ascending/descending |
-
-The catch: **only the parameters actually present should be applied.** If the client sends none, return everything. You must build the query **dynamically** — do not write a separate hard-coded query for every combination.
-> What does your filter look like with only `genre`? Only `minPrice`? Both prices? Sketch it before coding.
-
-### 6 — Author statistics
-Add `GET /authors/:id/stats` returning a summary computed from that author's books:
-
-```json
-{
-  "author": "Chinua Achebe",
-  "bookCount": 4,
-  "averagePrice": 21.5,
-  "cheapestBook": "Things Fall Apart",
-  "mostExpensiveBook": "Anthills of the Savannah"
-}
-```
-
-If the author has **no books**, return sensible values instead of crashing — decide what "sensible" means.
-
-**Challenge:** add **pagination** to `GET /books` (`page` and `limit` params) and include `page`, `limit`, `total`, and the `results` in the response.
-
----
-
-## What to submit
-
-
-Submit a **a Github repository link** containing your project code. The repository must also contain **a video recording** in which you walk through your entire implementation. Your video should:
-
-- Show the code for your models, controllers, and routes, explaining what each part does.
-- Run the server and demonstrate **every endpoint** live in your API client (Postman/Insomnia/REST Client).
-- Demonstrate each **Part 4** business rule working — the rejected orphan (400), the rejected duplicate (409), the rejected invalid price/year (422), your author-delete policy, `GET /books` with **at least two filters combined**, and `GET /authors/:id/stats`.
-- **Explain your reasoning out loud**, especially your choice of author-delete policy (Requirement 4) and its downside.
-
-> I will be grading how you *think*, so narrate your decisions — don't just click through.
-
-Good luck — build it one endpoint at a time, and test each in your API client before moving on.
----
+| Method | Endpoint | Description | Status Code |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/` | API Health Check | `200 OK` |
+| `POST` | `/authors` | Create author | `201 Created` / `400 Bad Request` |
+| `GET` | `/authors` | Get all authors | `200 OK` |
+| `GET` | `/authors/:id` | Get author by ID | `200 OK` / `404 Not Found` / `400 Bad Request` |
+| `PUT` | `/authors/:id` | Update author | `200 OK` / `404 Not Found` / `400 Bad Request` |
+| `DELETE` | `/authors/:id` | Delete author (blocked if books exist) | `200 OK` / `409 Conflict` / `404 Not Found` |
+| `GET` | `/authors/:id/books` | Get all books for an author | `200 OK` / `404 Not Found` |
+| `GET` | `/authors/:id/stats` | Compute statistics for an author | `200 OK` / `404 Not Found` |
+| `POST` | `/books` | Create book | `201 Created` / `400 Bad Request` / `409 Conflict` / `422 Unprocessable` |
+| `GET` | `/books` | Get books (with filters, sort & pagination) | `200 OK` |
+| `GET` | `/books/:id` | Get book by ID (populated author) | `200 OK` / `404 Not Found` |
+| `PUT` | `/books/:id` | Update book | `200 OK` / `404 Not Found` / `409 Conflict` / `422 Unprocessable` |
+| `DELETE` | `/books/:id` | Delete book | `200 OK` / `404 Not Found` |
