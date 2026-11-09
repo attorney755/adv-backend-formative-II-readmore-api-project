@@ -1,0 +1,23 @@
+{
+  "name": "adv-backend-formative-ii-readmore-api-project",
+  "version": "1.0.0",
+  "description": "ReadMore API — Express + MongoDB (Mongoose) Bookstore REST API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "express",
+    "mongodb",
+    "mongoose",
+    "rest-api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^8.9.5"
+  }
+}
