@@ -98,6 +98,11 @@ const updateAuthor = async (req, res) => {
 // @desc    Delete an author
 // @route   DELETE /authors/:id
 // @access  Public
+// Business Rule 4: Author Delete Policy (Option A - Block Delete)
+// Justification: In a bookstore/inventory system, deleting an author should never silently
+// delete inventory items (Option B - Cascade) or silently reassign intellectual property (Option C).
+// Option A preserves data integrity and prevents accidental loss of book records.
+// Downside: Requires manual intervention from the client to resolve dependent books before deletion.
 const deleteAuthor = async (req, res) => {
   try {
     const { id } = req.params;
@@ -109,6 +114,16 @@ const deleteAuthor = async (req, res) => {
     const author = await Author.findById(id);
     if (!author) {
       return res.status(404).json({ message: 'Author not found' });
+    }
+
+    // Check if author still has associated books (Prevent orphan books)
+    const bookCount = await Book.countDocuments({ author: id });
+    if (bookCount > 0) {
+      return res.status(409).json({
+        message: `Conflict: Cannot delete author '${author.name}'. This author has ${bookCount} associated book(s). Please delete or reassign their books before deleting the author.`,
+        policy: 'BLOCK_DELETE',
+        bookCount
+      });
     }
 
     await Author.findByIdAndDelete(id);
