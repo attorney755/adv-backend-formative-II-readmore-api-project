@@ -1,5 +1,10 @@
 # ReadMore API — Express + MongoDB (Mongoose)
 
+## Video Walkthrough
+- **Demonstration Video Link:** [Watch Video Walkthrough](https://byupathwayworldwideprod-my.sharepoint.com/:v:/g/personal/aniyigaba_byupathway_edu/IQAsnBwNv_iwQLuR0AT3xd5TAe1NLNqUa0HKJ8a2hEwvK6s?e=EEVpvT)
+
+---
+
 In this project, I built a RESTful API for a bookstore called **ReadMore API** using **Node.js**, **Express.js**, **MongoDB**, and **Mongoose**. 
 
 The system models two relational entities — **Authors** and **Books** — where one author can have many books, and every book belongs to an author. Beyond standard CRUD operations, I implemented custom business logic, dynamic filtering, sorting, pagination, data population, and strict validation rules.
